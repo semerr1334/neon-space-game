@@ -118,7 +118,11 @@ ACHIEVEMENTS = [
     {"id": "survivor", "name": "Выживший", "desc": "Продержись 5 минут", "icon": "🛡️", "unlocked": False},
     {"id": "sharpshooter", "name": "Снайпер", "desc": "Уничтожь 100 врагов без урона", "icon": "🎯", "unlocked": False},
     {"id": "chaos_mode", "name": "Хаос", "desc": "Активируй режим хаоса", "icon": "🌀", "unlocked": False},
-    {"id": "treasure_hunter", "name": "Охотник за сокровищами", "desc": "Найди 10 бонусных волн", "icon": "💎", "unlocked": False}
+    {"id": "treasure_hunter", "name": "Охотник за сокровищами", "desc": "Найди 10 бонусных волн", "icon": "💎", "unlocked": False},
+    {"id": "legend", "name": "Легенда", "desc": "Набери 10000 очков", "icon": "🏆", "unlocked": False},
+    {"id": "speed_demon", "name": "Скоростной демон", "desc": "Используй рывок 50 раз", "icon": "⚡", "unlocked": False},
+    {"id": "collector", "name": "Магнат", "desc": "Собери 5000 монет", "icon": "💎", "unlocked": False},
+    {"id": "chapter_8", "name": "Герой Земли", "desc": "Пройди все 8 глав", "icon": "🌍", "unlocked": False}
 ]
 
 # ============================================
@@ -392,6 +396,22 @@ class AchievementManager:
         if game_stats.get('bonus_waves_found', 0) >= 10:
             self._unlock_achievement('treasure_hunter', unlocked)
         
+        # Легенда - 10000 очков
+        if player.score >= 10000 or game_stats.get('highest_score', 0) >= 10000:
+            self._unlock_achievement('legend', unlocked)
+        
+        # Скоростной демон - 50 рывков
+        if game_stats.get('total_dashes', 0) >= 50:
+            self._unlock_achievement('speed_demon', unlocked)
+        
+        # Магнат - 5000 монет
+        if player.coins >= 5000 or game_stats.get('total_coins', 0) >= 5000:
+            self._unlock_achievement('collector', unlocked)
+        
+        # Герой Земли - пройдена 8 глава
+        if game_stats.get('story_progress', 0) >= 8:
+            self._unlock_achievement('chapter_8', unlocked)
+        
         return unlocked
     
     def _unlock_achievement(self, ach_id, unlocked_list):
@@ -558,6 +578,10 @@ class Player(pygame.sprite.Sprite):
         self.dash_duration = 12
         self.invincible = True
         self.invincible_timer = 12
+        
+        # Счётчик рывков для достижения
+        game_stats['total_dashes'] = game_stats.get('total_dashes', 0) + 1
+        
         if direction:
             self.dash_direction = direction
         else:
@@ -841,7 +865,13 @@ class DataManager:
             "cheat_god_mode": False,
             "cheat_infinite_dash": False,
             "cheat_instant_kill": False,
-            "cheat_max_weapon": False
+            "cheat_max_weapon": False,
+            # 🎯 Статистика для достижений
+            "total_dashes": 0,
+            "bosses_defeated": 0,
+            "bonus_waves_found": 0,
+            "highest_score": 0,
+            "achievements": []
         }
         self.load()
 
@@ -886,7 +916,12 @@ class DataManager:
             "dual_bullets": False, "rapid_fire": False, "speed_boost": False, "max_health": 100,
             "player_level": 1, "player_xp": 0,
             "operator_mode": False, "cheat_god_mode": False, "cheat_infinite_dash": False,
-            "cheat_instant_kill": False, "cheat_max_weapon": False
+            "cheat_instant_kill": False, "cheat_max_weapon": False,
+            "total_dashes": 0,
+            "bosses_defeated": 0,
+            "bonus_waves_found": 0,
+            "highest_score": 0,
+            "achievements": []
         }
         self.save()
 
@@ -1431,7 +1466,11 @@ class Game:
                     "total_kills": self.dm.data.get("total_kills", 0) + 1,
                     "bosses_defeated": self.dm.data.get("bosses_defeated", 0),
                     "survival_time": self.survival_time,
-                    "bonus_waves_found": self.bonus_waves_found
+                    "bonus_waves_found": self.bonus_waves_found,
+                    "highest_score": self.dm.data.get("highest_score", 0),
+                    "total_dashes": self.dm.data.get("total_dashes", 0),
+                    "total_coins": self.dm.data.get("total_coins", 0),
+                    "story_progress": self.dm.data.get("story_progress", 0)
                 }
                 unlocked = self.achievement_manager.check_and_unlock(self.player, game_stats)
                 for ach in unlocked:
