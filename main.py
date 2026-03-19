@@ -51,6 +51,10 @@ COLOR_INVINCIBLE = (255, 255, 100)
 COLOR_UPGRADE = (255, 200, 50)
 COLOR_XP = (150, 100, 255)
 COLOR_CHEAT = (255, 0, 100)  # ✅ Цвет для читов
+COLOR_COMBO = (255, 100, 200)
+COLOR_ACHIEVEMENT = (255, 215, 0)
+COLOR_CHAOS = (180, 0, 255)
+COLOR_BONUS_WAVE = (0, 255, 255)
 
 SHIP_COLORS = [
     (0, 255, 255, "Циан"),
@@ -101,6 +105,20 @@ STORY_CHAPTERS = [
     {"id": 6, "title": "Предательство", "enemy_count": 100, "boss": False, "reward": 400},
     {"id": 7, "title": "Флот вторжения", "enemy_count": 120, "boss": False, "reward": 700},
     {"id": 8, "title": "Финальная битва", "enemy_count": 180, "boss": True, "reward": 2000}
+]
+
+# 🎯 ДОСТИЖЕНИЯ
+ACHIEVEMENTS = [
+    {"id": "first_blood", "name": "Первая кровь", "desc": "Уничтожь первого врага", "icon": "⚔️", "unlocked": False},
+    {"id": "combo_10", "name": "Комбо-мастер", "desc": "Достигни комбо x10", "icon": "🔥", "unlocked": False},
+    {"id": "combo_50", "name": "Неудержимый", "desc": "Достигни комбо x50", "icon": "💥", "unlocked": False},
+    {"id": "coins_1000", "name": "Коллекционер", "desc": "Собери 1000 монет", "icon": "💰", "unlocked": False},
+    {"id": "level_10", "name": "Опытный пилот", "desc": "Достигни уровня 10", "icon": "⭐", "unlocked": False},
+    {"id": "boss_slayer", "name": "Убийца боссов", "desc": "Победи 5 боссов", "icon": "👹", "unlocked": False},
+    {"id": "survivor", "name": "Выживший", "desc": "Продержись 5 минут", "icon": "🛡️", "unlocked": False},
+    {"id": "sharpshooter", "name": "Снайпер", "desc": "Уничтожь 100 врагов без урона", "icon": "🎯", "unlocked": False},
+    {"id": "chaos_mode", "name": "Хаос", "desc": "Активируй режим хаоса", "icon": "🌀", "unlocked": False},
+    {"id": "treasure_hunter", "name": "Охотник за сокровищами", "desc": "Найди 10 бонусных волн", "icon": "💎", "unlocked": False}
 ]
 
 # ============================================
@@ -329,6 +347,82 @@ class Cutscene:
             chapter_text = chapter_font.render(f"Глава {self.chapter_id}", True, COLOR_TEXT)
             chapter_text.set_alpha(self.text_alpha)
             surface.blit(chapter_text, (SCREEN_WIDTH//2 - chapter_text.get_width()//2, SCREEN_HEIGHT//2 - 50))
+
+# 🎯 КЛАСС ДОСТИЖЕНИЙ
+class AchievementManager:
+    def __init__(self):
+        self.achievements = []
+        for ach in ACHIEVEMENTS:
+            self.achievements.append(ach.copy())
+        self.new_unlocks = []
+    
+    def check_and_unlock(self, player, game_stats):
+        """Проверка достижений и разблокировка"""
+        unlocked = []
+        
+        # Первая кровь
+        if game_stats.get('total_kills', 0) >= 1:
+            self._unlock_achievement('first_blood', unlocked)
+        
+        # Комбо 10
+        if player.combo >= 10:
+            self._unlock_achievement('combo_10', unlocked)
+        
+        # Комбо 50
+        if player.combo >= 50:
+            self._unlock_achievement('combo_50', unlocked)
+        
+        # Коллекционер
+        if player.coins >= 1000 or game_stats.get('total_coins', 0) >= 1000:
+            self._unlock_achievement('coins_1000', unlocked)
+        
+        # Уровень 10
+        if player.level >= 10:
+            self._unlock_achievement('level_10', unlocked)
+        
+        # Убийца боссов
+        if game_stats.get('bosses_defeated', 0) >= 5:
+            self._unlock_achievement('boss_slayer', unlocked)
+        
+        # Выживший (5 минут = 300 секунд = 18000 кадров при 60 FPS)
+        if game_stats.get('survival_time', 0) >= 18000:
+            self._unlock_achievement('survivor', unlocked)
+        
+        # Охотник за сокровищами
+        if game_stats.get('bonus_waves_found', 0) >= 10:
+            self._unlock_achievement('treasure_hunter', unlocked)
+        
+        return unlocked
+    
+    def _unlock_achievement(self, ach_id, unlocked_list):
+        for ach in self.achievements:
+            if ach['id'] == ach_id and not ach['unlocked']:
+                ach['unlocked'] = True
+                unlocked_list.append(ach)
+                self.new_unlocks.append(ach)
+                break
+    
+    def draw_notifications(self, surface):
+        """Отрисовка уведомлений о новых достижениях"""
+        y_offset = SCREEN_HEIGHT - 100
+        for i, ach in enumerate(self.new_unlocks[-3:]):  # Показываем последние 3
+            alpha = min(255, (len(self.new_unlocks) - i) * 80)
+            overlay = pygame.Surface((SCREEN_WIDTH, 60))
+            overlay.set_alpha(alpha)
+            overlay.fill((0, 0, 0))
+            surface.blit(overlay, (0, y_offset - i * 65))
+            
+            icon_font = pygame.font.SysFont("Arial", 30)
+            icon = icon_font.render(ach['icon'], True, COLOR_ACHIEVEMENT)
+            surface.blit(icon, (20, y_offset - i * 65 + 10))
+            
+            name_font = pygame.font.SysFont("Arial", 18, bold=True)
+            name = name_font.render(f"🏆 {ach['name']}!", True, COLOR_ACHIEVEMENT)
+            surface.blit(name, (70, y_offset - i * 65 + 5))
+            
+            desc_font = pygame.font.SysFont("Arial", 14)
+            desc = desc_font.render(ach['desc'], True, COLOR_TEXT)
+            surface.blit(desc, (70, y_offset - i * 65 + 30))
 
 # ============================================
 # ИГРОВЫЕ ОБЪЕКТЫ
@@ -902,6 +996,21 @@ class Game:
         self.cheat_button_rect = pygame.Rect(SCREEN_WIDTH - 60, 60, 40, 40)
         self.cheats_open = False
         
+        # 🎯 Менеджер достижений
+        self.achievement_manager = AchievementManager()
+        
+        # 🌀 Режим хаоса
+        self.chaos_mode = False
+        self.chaos_timer = 0
+        
+        # 💎 Бонусные волны
+        self.bonus_wave_active = False
+        self.bonus_wave_timer = 0
+        self.bonus_waves_found = 0
+        
+        # ⏱️ Время выживания
+        self.survival_time = 0
+        
         if self.dm.data["music_enabled"] and self.audio.music_loaded:
             self.audio.play_music()
 
@@ -1222,6 +1331,43 @@ class Game:
         self.dm.save()
 
     def update_game(self):
+        # ⏱️ Обновляем время выживания
+        self.survival_time += 1
+        
+        # 🌀 Режим хаоса
+        if self.chaos_mode:
+            self.chaos_timer -= 1
+            if self.chaos_timer <= 0:
+                self.chaos_mode = False
+                self.create_floating_text(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, "ХАОС ЗАВЕРШЁН!", COLOR_TEXT)
+        
+        # 💎 Проверка бонусной волны (10% шанс каждые 30 секунд)
+        if not self.bonus_wave_active and self.survival_time % 1800 == 0 and random.random() < 0.3:
+            self.bonus_wave_active = True
+            self.bonus_wave_timer = 600  # 10 секунд
+            self.bonus_waves_found += 1
+            self.create_floating_text(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, "БОНУСНАЯ ВОЛНА!", COLOR_BONUS_WAVE)
+            # Спавним много монет
+            for _ in range(20):
+                bx = random.randint(50, SCREEN_WIDTH - 50)
+                by = random.randint(50, SCREEN_HEIGHT - 200)
+                bonus = Bonus(bx, by, bonus_type="coin")
+                self.all_sprites.add(bonus)
+                self.bonuses.add(bonus)
+        
+        if self.bonus_wave_active:
+            self.bonus_wave_timer -= 1
+            if self.bonus_wave_timer <= 0:
+                self.bonus_wave_active = False
+                self.create_floating_text(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, "ВОЛНА ЗАВЕРШЕНА", COLOR_TEXT)
+        
+        # 🎯 Активация режима хаоса при комбо x30
+        if self.player.combo >= 30 and not self.chaos_mode:
+            self.chaos_mode = True
+            self.chaos_timer = 900  # 15 секунд
+            self.achievement_manager._unlock_achievement("chaos_mode", [])
+            self.create_floating_text(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, "РЕЖИМ ХАОСА!", COLOR_CHAOS)
+        
         if not self.player:
             return
         for star in self.stars:
@@ -1279,6 +1425,18 @@ class Game:
                 self.player.add_combo()
                 self.combo_timer = 180
                 self.enemies_killed += 1
+                
+                # 🎯 Проверка достижений
+                game_stats = {
+                    "total_kills": self.dm.data.get("total_kills", 0) + 1,
+                    "bosses_defeated": self.dm.data.get("bosses_defeated", 0),
+                    "survival_time": self.survival_time,
+                    "bonus_waves_found": self.bonus_waves_found
+                }
+                unlocked = self.achievement_manager.check_and_unlock(self.player, game_stats)
+                for ach in unlocked:
+                    self.create_floating_text(SCREEN_WIDTH//2, SCREEN_HEIGHT//3, f"🏆 {ach["name"]}!", COLOR_ACHIEVEMENT)
+                
                 self.create_explosion(enemy.rect.centerx, enemy.rect.centery, enemy.color)
                 if random.random() < 0.12:
                     bonus = Bonus(enemy.rect.centerx, enemy.rect.centery)
@@ -1571,6 +1729,31 @@ class Game:
             pygame.draw.rect(self.screen, (200, 50, 50), close_rect, border_radius=10)
             close_text = self.font.render("ЗАКРЫТЬ", True, COLOR_TEXT)
             self.screen.blit(close_text, (close_rect.x + 40, close_rect.y + 15))
+        
+        
+        # 🎯 Отрисовка уведомлений о достижениях
+        self.achievement_manager.draw_notifications(self.screen)
+        
+        # 🔥 Отрисовка комбо
+        if self.player and self.player.combo > 5:
+            combo_font = pygame.font.SysFont("Arial", 32, bold=True)
+            combo_color = COLOR_COMBO
+            if self.chaos_mode:
+                combo_color = COLOR_CHAOS
+            combo_text = combo_font.render(f"COMBO x{self.player.combo}!", True, combo_color)
+            self.screen.blit(combo_text, (SCREEN_WIDTH//2 - combo_text.get_width()//2, 100))
+        
+        # 🌀 Отрисовка режима хаоса
+        if self.chaos_mode:
+            chaos_font = pygame.font.SysFont("Arial", 24, bold=True)
+            chaos_text = chaos_font.render(f"ХАОС: {self.chaos_timer//60}с", True, COLOR_CHAOS)
+            self.screen.blit(chaos_text, (SCREEN_WIDTH//2 - chaos_text.get_width()//2, 140))
+        
+        # 💎 Отрисовка бонусной волны
+        if self.bonus_wave_active:
+            bonus_font = pygame.font.SysFont("Arial", 24, bold=True)
+            bonus_text = bonus_font.render(f"БОНУС: {self.bonus_wave_timer//60}с", True, COLOR_BONUS_WAVE)
+            self.screen.blit(bonus_text, (SCREEN_WIDTH//2 - bonus_text.get_width()//2, 170))
         
         pygame.draw.rect(self.screen, (100, 100, 100), (SCREEN_WIDTH - 50, 10, 35, 35), border_radius=5)
 
