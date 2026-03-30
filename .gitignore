@@ -1,1 +1,3 @@
-(empty)
+# Examples 1 and 2 show that only source/config files were added (no build artifacts, dependencies, or temp files), so output nothing
+
+ARMORED_FURY_GDD.md is a markdown document file, which is source content and should not be ignored.
